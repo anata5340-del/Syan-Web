@@ -1,0 +1,304 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Search Input - General */
+.ant-input-wrapper input[placeholder="Search"] {
+  border-radius: 22px;
+  border: unset;
+  height: 32px;
+  color: #fff;
+}
+.ant-input-wrapper input::placeholder {
+  color: #fff;
+}
+.ant-input-group-addon .ant-input-search-button {
+  border-radius: 0px 22px 22px 0px !important;
+  border: unset;
+}
+.ant-input-search-button .anticon-search {
+  color: #fff;
+}
+
+/* Header Search Input */
+.headerSearch .ant-input-wrapper input[placeholder="Search"] {
+  background: #ef6a77;
+}
+.headerSearch .ant-input-group-addon .ant-input-search-button {
+  background: #ef6a77;
+}
+.headerSearch .ant-input-group-addon .ant-input-search-button:hover {
+  background: #ef6a77 !important;
+}
+
+/* CNIC & College Upload File */
+.uploadColor {
+  color: #f9954b !important;
+  cursor: pointer;
+}
+
+/*Table General */
+td.ant-table-cell {
+  border-inline-end: 1px solid #000 !important;
+  border-bottom: 1px solid #000 !important;
+}
+
+th.ant-table-cell {
+  border-inline-end: 1px solid #000 !important;
+  border-bottom: 1px solid #000 !important;
+  border-radius: 0px !important;
+}
+
+.ant-table-container {
+  border-inline-start: 1px solid #000 !important;
+  border-top: 1px solid #000 !important;
+  border-radius: 0px !important;
+}
+
+/* User Search Input */
+.userSearch {
+  border-radius: 25px !important;
+  border: 1.2px solid #3e3e3e !important;
+  height: 36px !important;
+}
+
+/*User Profile Modal Input */
+.userInput {
+  border-radius: 1.5rem !important;
+  border: 1.2px solid #1c1c1c !important;
+  margin-top: 5px !important;
+}
+.upload-btn .ant-upload {
+  background: #fdc9ce;
+  border-radius: 50%;
+  border: unset !important;
+}
+.cancelBtn {
+  border-radius: 23px !important;
+  border: 1.4px solid #ff021b !important;
+  background-color: #fff !important;
+  color: #ff021b !important;
+  padding: 0px 25px !important;
+}
+.saveBtn {
+  border-radius: 23px !important;
+  background: #01b067 !important;
+  padding: 0px 25px !important;
+}
+.recoverBtn {
+  border-radius: 4px !important;
+  background: #ff021b !important;
+  color: #fff !important;
+}
+
+/* Package */
+.nameModal {
+  border-radius: 15px !important;
+}
+.nameModal .ant-modal-footer {
+  margin-top: 0px !important;
+}
+
+/* Delete Notification */
+.yesBtn {
+  border-radius: 5px !important;
+  background: #f9d293 !important;
+  padding: 0px 25px !important;
+  color: #3e3e3e !important;
+}
+.noBtn {
+  border-radius: 5px !important;
+  border: 0.5px solid #3e3e3e !important;
+  background: transparent !important;
+  padding: 0px 25px !important;
+  color: #3e3e3e !important;
+}
+
+/* Table General */
+.ant-table-thead .ant-table-cell {
+  background-color: #ceeaff !important;
+}
+
+.ant-modal-content {
+  padding: 0px !important;
+}
+
+.ant-popconfirm {
+  width: 300px !important;
+}
+
+/* Attached Courses Table */
+.attachedCoursesTable .ant-table-container {
+  border-inline-start: unset !important;
+  border-top: unset !important;
+}
+
+.attachedCoursesTable .ant-table-cell,
+.attachedCoursesTable .ant-table-cell::before {
+  border: unset !important;
+  background-color: transparent !important;
+  width: 30px !important;
+  padding: 16px 0px !important;
+}
+.attachedCoursesTable .ant-table {
+  width: 50% !important;
+}
+
+/*Invoice Table*/
+.invoiceTable .ant-table-container {
+  border-inline-start: unset !important;
+  border-top: unset !important;
+}
+.invoiceTable .ant-table {
+  width: 100% !important;
+}
+.invoiceTable .ant-table-cell,
+.invoiceTable .ant-table-cell::before {
+  border: unset !important;
+  background-color: transparent !important;
+}
+
+/* Add Course Modal */
+.addCourseModal {
+  border-radius: 15px !important;
+  border: 1px solid #333 !important;
+}
+
+/* User Package Table */
+
+.userPackageTable .ant-table-thead .ant-table-cell {
+  background-color: #fdc9ce !important;
+}
+
+/* Package Active Status Button */
+.activeStatusBtn {
+  background: transparent !important;
+  border: 1px solid #01b067 !important;
+}
+
+.activeStatusBtn .ant-switch-handle::before {
+  background: #01b067 !important;
+}
+
+/* Attached Packages Table*/
+.attachedPackagesTable .ant-table-container {
+  border-inline-start: unset !important;
+  border-top: unset !important;
+}
+
+.attachedPackagesTable .ant-table-thead .ant-table-cell {
+  background-color: transparent !important;
+  border: unset !important;
+}
+
+.attachedPackagesTable .ant-table-cell,
+.attachedCoursesTable .ant-table-cell::before {
+  border: unset !important;
+  background-color: transparent !important;
+  width: 30px !important;
+  padding: 16px 0px !important;
+}
+.attachedPackagesTable .ant-table {
+  width: 90% !important;
+}
+.attachedPackagesTable .ant-table-cell::before {
+  background: transparent !important;
+}
+
+/* Edit Date Input */
+.editDateInput {
+  border: 1px solid #000 !important;
+}
+
+.editDateInput::placeholder {
+  color: #000 !important;
+}
+
+/* Color Picker Button */
+.colorPickerBtn {
+  border: unset !important;
+  background: transparent !important;
+}
+
+.colorPickerBtn .ant-color-picker-color-block-inner {
+  width: 85px !important;
+  height: 33px !important;
+  margin-top: -4px !important;
+}
+
+/* Quiz Category Search Input */
+.quizCategory .ant-select-selector {
+  width: 200px !important;
+  background: #fab683 !important;
+}
+.quizCategory .ant-select-selector .ant-select-selection-placeholder {
+  color: #4f4f4f !important;
+}
+
+/* Reference Input */
+.referenceInput {
+  padding: 20px 10px !important;
+}
+
+.transparentInput {
+  background: transparent !important;
+}
+
+.transparentInput .ant-select-selector {
+  background: transparent !important;
+}
+
+.activeImg {
+  filter: invert(1);
+}
+
+/* Notes Accordion */
+.notesAccordion .ant-collapse-header {
+  background: #ceeaff !important;
+}
+
+.notesAccordion .ant-collapse-header-text {
+  font-weight: 500 !important;
+}
+
+/* Video Add Content Upload */
+.videoContentUpload {
+  input {
+    width: 40px !important;
+  }
+}
+
+/* Shawdow Effect */
+.shadowEffect {
+  box-shadow: 0 4px 25px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+}
+
+.boxShadow {
+  box-shadow: 0px 0px 11.5px 3px rgba(0, 0, 0, 0.08);
+}
+
+/*Checkbox Style */
+.checkbox-round {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  border: 1px solid #056fbb;
+}
+
+.checkbox-round:checked {
+  background-color: #056fbb;
+}
+
+.linear-Line {
+  background: linear-gradient(
+    90deg,
+    #4fb1c1 0%,
+    #277c72 19%,
+    #ef6a77 45%,
+    #01b067 77%,
+    #f9954b 100%
+  );
+}
