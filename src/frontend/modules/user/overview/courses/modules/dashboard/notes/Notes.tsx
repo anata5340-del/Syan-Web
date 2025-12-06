@@ -58,6 +58,7 @@ export default function Notes({
       const { data } = await axios.get(
         `/api/videoCourses/${courseId}/modules/${moduleId}/section/${sectionId}/subSection/${subSectionId}/subSectionBlock/${subSectionBlockId}/note`
       );
+      console.log("data =>>>>>>>>>>>>>>>>>", data);
       setNote(data.data);
     } catch (error) {
       console.error("getNote Error", error);
@@ -112,7 +113,7 @@ export default function Notes({
           },
         ],
       });
-      console.log("data", data);
+      // console.log("data", data);
       setAddedToFavourites(true);
       setFavourites(data.favourites);
     } catch (error) {
@@ -462,30 +463,41 @@ export default function Notes({
 }
 
 import { useMemo } from "react";
-import Markdoc, { Node } from "@markdoc/markdoc";
+import { marked } from "marked";
 
 // Define the types for the component
 interface MarkdownEditorProps {
   content: string;
 }
 
+// Detect if content is HTML or Markdown (for backward compatibility)
+const isHtml = (content: string): boolean => {
+  if (!content) return false;
+  // Check for HTML tags
+  const htmlTagPattern = /<[a-z][\s\S]*>/i;
+  return htmlTagPattern.test(content);
+};
+
 export function MarkdownEditor({ content }: MarkdownEditorProps) {
-  // Parse the content into Markdoc's abstract syntax tree (AST)
+  // Convert content to HTML for display
+  // If content is already HTML, use it directly
+  // If content is Markdown (backward compatibility), convert it to HTML
+  const htmlContent = useMemo(() => {
+    if (!content) return "";
 
-  console.log("content", content);
-  const parsedContent: Node | null = useMemo(() => {
-    return Markdoc.parse(content);
-  }, [content]);
-
-  // Render the AST into React components
-
-  const renderedContent = useMemo(() => {
-    if (parsedContent) {
-      const transformContent = Markdoc.transform(parsedContent);
-      return Markdoc.renderers.react(transformContent, React);
+    if (isHtml(content)) {
+      // Already HTML, use directly
+      return content;
     }
-    return null;
-  }, [parsedContent]);
+
+    // It's Markdown, convert to HTML for backward compatibility
+    try {
+      return marked.parse(content) as string;
+    } catch (error) {
+      console.error("Error converting markdown to HTML:", error);
+      return content;
+    }
+  }, [content]);
 
   return (
     <div style={{ padding: "1rem" }}>
@@ -542,11 +554,111 @@ export function MarkdownEditor({ content }: MarkdownEditorProps) {
             font-weight: 400;
             margin-bottom: 0.3rem;
           }
+
+          /* Table styles */
+          table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1rem 0;
+          }
+
+          table th,
+          table td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+          }
+
+          table th {
+            background-color: #f2f2f2;
+            font-weight: 600;
+          }
+
+          table tr:nth-child(even) {
+            background-color: #f9f9f9;
+          }
+
+          /* List styles */
+          ul, ol {
+            margin: 1rem 0;
+            padding-left: 2rem;
+          }
+
+          ul li, ol li {
+            margin: 0.5rem 0;
+          }
+
+          /* Link styles */
+          a {
+            color: #1890ff;
+            text-decoration: underline;
+          }
+
+          a:hover {
+            color: #40a9ff;
+          }
+
+          /* Paragraph styles */
+          p {
+            margin: 1rem 0;
+            line-height: 1.6;
+          }
+
+          /* Code styles */
+          code {
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+          }
+
+          pre {
+            background-color: #f4f4f4;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 1rem 0;
+          }
+
+          pre code {
+            background-color: transparent;
+            padding: 0;
+          }
+
+          /* Blockquote styles */
+          blockquote {
+            border-left: 4px solid #ddd;
+            margin: 1rem 0;
+            padding-left: 1rem;
+            color: #666;
+            font-style: italic;
+          }
+
+          /* Preserve all colors and formatting from TinyMCE */
+          /* Note: Removed 'color: inherit' to allow inline color styles to work */
+          
+          /* Ensure inline styles are preserved */
+          .note-content-wrapper * {
+            /* Don't override inline styles */
+          }
+          
+          /* Preserve text colors from inline styles */
+          .note-content-wrapper [style*="color"] {
+            /* Let inline color styles work */
+          }
         `}
       </style>
 
-      {/* Render the content or display a fallback message */}
-      {renderedContent || <p>No content to display.</p>}
+      {/* Render the HTML content directly */}
+      {htmlContent ? (
+        <div
+          className="note-content-wrapper"
+          dangerouslySetInnerHTML={{ __html: htmlContent }}
+        />
+      ) : (
+        <p>No content to display.</p>
+      )}
     </div>
   );
 }

@@ -1,0 +1,15 @@
+{
+  "/_app": "pages/_app.js",
+  "/_error": "pages/_error.js",
+  "/_document": "pages/_document.js",
+  "/user/videoCourses/[id]/modules/dashboard": "pages/user/videoCourses/[id]/modules/dashboard.js",
+  "/user/videoCourses/[id]/modules/dashboard/notes/[noteId]": "pages/user/videoCourses/[id]/modules/dashboard/notes/[noteId].js",
+  "/api/users/logout": "pages/api/users/logout.js",
+  "/login": "pages/login.js",
+  "/api/users/login": "pages/api/users/login.js",
+  "/admin": "pages/admin.js",
+  "/admin/library": "pages/admin/library.js",
+  "/api/categories": "pages/api/categories.js",
+  "/api/users": "pages/api/users.js",
+  "/api/notes": "pages/api/notes.js"
+}

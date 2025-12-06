@@ -3,10 +3,9 @@
 import React, { useRef, useEffect } from "react";
 import { Editor } from "@tinymce/tinymce-react";
 import { marked } from "marked";
-import TurndownService from "turndown";
 
 interface RichTextEditorProps {
-  value: string; // Markdown content
+  value: string; // HTML content (or Markdown for backward compatibility)
   onChange: (value: string) => void;
   readOnly?: boolean;
   height?: number;
@@ -21,10 +20,17 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   placeholder = "Start typing...",
 }) => {
   const editorRef = useRef<any>(null);
-  const turndownService = useRef(new TurndownService());
   const lastValueRef = useRef<string>("");
 
-  // Convert markdown to HTML for TinyMCE
+  // Detect if content is HTML or Markdown (for backward compatibility)
+  const isHtml = (content: string): boolean => {
+    if (!content) return false;
+    // Check for HTML tags
+    const htmlTagPattern = /<[a-z][\s\S]*>/i;
+    return htmlTagPattern.test(content);
+  };
+
+  // Convert markdown to HTML for TinyMCE (for backward compatibility with existing Markdown content)
   const markdownToHtml = (markdown: string): string => {
     if (!markdown) return "";
     try {
@@ -35,29 +41,28 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     }
   };
 
-  // Convert HTML to markdown for saving
-  const htmlToMarkdown = (html: string): string => {
-    if (!html || html === "<p></p>") return "";
-    try {
-      return turndownService.current.turndown(html);
-    } catch (error) {
-      console.error("Error converting HTML to markdown:", error);
-      return html;
+  // Get HTML content - either use value directly if HTML, or convert from Markdown
+  const getHtmlContent = (content: string): string => {
+    if (!content) return "";
+    if (isHtml(content)) {
+      return content; // Already HTML, use directly
     }
+    // It's Markdown, convert to HTML for backward compatibility
+    return markdownToHtml(content);
   };
 
   const handleEditorChange = (content: string) => {
-    const markdown = htmlToMarkdown(content);
-    if (markdown !== lastValueRef.current) {
-      lastValueRef.current = markdown;
-      onChange(markdown);
+    // Store HTML directly instead of converting to Markdown
+    if (content !== lastValueRef.current) {
+      lastValueRef.current = content;
+      onChange(content); // Pass HTML directly
     }
   };
 
   // Update editor content when value prop changes
   useEffect(() => {
     if (editorRef.current && value !== lastValueRef.current) {
-      const html = markdownToHtml(value);
+      const html = getHtmlContent(value);
       const currentContent = editorRef.current.getContent();
       if (currentContent !== html) {
         editorRef.current.setContent(html);
@@ -88,8 +93,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         apiKey="kiaz73368qvsu6hvps8qla5p3iiqnd2or78tzp3o24wlqmzf"
         onInit={(evt, editor) => {
           editorRef.current = editor;
-          // Set initial content from markdown
-          const html = markdownToHtml(value);
+          // Set initial content (HTML or converted from Markdown for backward compatibility)
+          const html = getHtmlContent(value);
           editor.setContent(html);
           lastValueRef.current = value;
         }}
@@ -123,7 +128,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             "bold italic underline strikethrough | forecolor backcolor | " +
             "alignleft aligncenter alignright alignjustify | " +
             "bullist numlist | outdent indent | " +
-            "link image | code | removeformat | help",
+            "link image | code | removeformat | fullscreen | help",
           content_style:
             "body { font-family: Arial, Helvetica, sans-serif; font-size: 14px; }",
           placeholder: placeholder,
@@ -132,6 +137,15 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           promotion: false,
           resize: false,
           statusbar: false,
+          // Preserve inline styles including colors
+          valid_elements: "*[*]",
+          extended_valid_elements: "*[*]",
+          // Ensure inline styles are preserved
+          keep_styles: true,
+          // Preserve formatting when pasting
+          paste_as_text: false,
+          paste_retain_style_properties:
+            "color font-size font-family background-color",
         }}
       />
     </div>
@@ -139,4 +153,3 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 };
 
 export default RichTextEditor;
-
