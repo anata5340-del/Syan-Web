@@ -28,6 +28,12 @@ if (mongoose.models.questionStatus) {
         type: Boolean,
         required: true,
       },
+      selectedOption: {
+        type: Number,
+        required: false,
+        min: 0,
+        max: 4,
+      },
     },
     { timestamps: true }
   );

@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{\"frontend/modules/admin/library/notes/addNotes.tsx -> @/frontend/components/editor/RichTextEditor\":{\"id\":\"frontend/modules/admin/library/notes/addNotes.tsx -> @/frontend/components/editor/RichTextEditor\",\"files\":[\"static/chunks/src_frontend_components_editor_RichTextEditor_tsx.js\"]}}"
+self.__REACT_LOADABLE_MANIFEST="{}"

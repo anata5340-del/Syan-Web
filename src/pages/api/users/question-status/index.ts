@@ -49,7 +49,8 @@ router
         user.id,
         req.body.questionId,
         req.body.questionName,
-        req.body.correct
+        req.body.correct,
+        req.body.selectedOption
       );
       res.status(200).json("Question status added successfully");
     } catch (error) {

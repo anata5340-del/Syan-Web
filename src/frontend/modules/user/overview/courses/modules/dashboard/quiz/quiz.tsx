@@ -7,6 +7,9 @@ import { useRouter } from "next/router";
 import SubmitQuiz from "./submitQuiz";
 import { userStore } from "@/store/user/user";
 import FeedbackModal from "@/frontend/components/feedbackModal/FeedbackModal";
+import { useQuizContext } from "@/frontend/contexts/QuizContext";
+import LabValuesModal from "@/frontend/components/quiz/LabValuesModal";
+import Calculator from "@/frontend/components/quiz/Calculator";
 
 type Question = QuestionType & {
   _id: string;
@@ -52,6 +55,7 @@ export default function Quiz({
 }: Props) {
   const router = useRouter();
   const url = router.asPath;
+  const { setIsQuizActive } = useQuizContext();
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(
     null
   );
@@ -72,9 +76,15 @@ export default function Quiz({
   const [totalTime, setTotalTime] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isReview, setIsReview] = useState(false);
+  const [questionStatistics, setQuestionStatistics] = useState<
+    Record<string, any>
+  >({});
 
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] =
     useState<boolean>(false);
+  const [isLabValuesModalOpen, setIsLabValuesModalOpen] =
+    useState<boolean>(false);
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState<boolean>(false);
 
   const getQuestions = async (quizId: string, paperId: string) => {
     try {
@@ -209,6 +219,27 @@ export default function Quiz({
     }
   }, []);
 
+  // Set quiz active when questions are loaded
+  useEffect(() => {
+    if (questions.length > 0 && !isCompleted) {
+      setIsQuizActive(true);
+    }
+  }, [questions, isCompleted, setIsQuizActive]);
+
+  // Set quiz inactive when quiz is completed
+  useEffect(() => {
+    if (isCompleted) {
+      setIsQuizActive(false);
+    }
+  }, [isCompleted, setIsQuizActive]);
+
+  // Cleanup: Set quiz inactive on component unmount
+  useEffect(() => {
+    return () => {
+      setIsQuizActive(false);
+    };
+  }, [setIsQuizActive]);
+
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
@@ -291,20 +322,95 @@ export default function Quiz({
           }
         })
       );
-      handleNextQuestion();
       try {
+        console.log("📤 Submitting question:", {
+          questionId: selectedQuestion?.originalId,
+          questionName: selectedQuestion?.name,
+          selectedOption,
+          correct: selectedQuestion?.options[selectedOption].isCorrect,
+        });
+
         await axios.post(`/api/users/question-status`, {
           questionId: selectedQuestion?.originalId,
           questionName: selectedQuestion?.name,
           correct: selectedQuestion?.options[selectedOption].isCorrect,
+          selectedOption: selectedOption,
         });
+
+        console.log("✅ Question submitted successfully");
+
+        // Fetch statistics after submitting
+        if (selectedQuestion?.originalId) {
+          console.log("📊 Fetching statistics after submission");
+          await fetchQuestionStatistics(selectedQuestion.originalId);
+        }
+
+        // Navigate to next question after stats are fetched
+        handleNextQuestion();
       } catch (err) {
-        console.error(err);
+        console.error("❌ Error submitting question:", err);
+        // Still navigate even if there's an error
+        handleNextQuestion();
       }
     } else {
       alert("Please select an option.");
     }
   };
+
+  const fetchQuestionStatistics = async (questionId: string) => {
+    try {
+      console.log("🔍 Fetching statistics for questionId:", questionId);
+      const { data } = await axios.get(
+        `/api/questions/${questionId}/statistics`
+      );
+      console.log("✅ Statistics received:", data);
+      setQuestionStatistics((prev) => {
+        const updated = {
+          ...prev,
+          [questionId]: data,
+        };
+        console.log("📊 Updated questionStatistics state:", updated);
+        return updated;
+      });
+    } catch (error) {
+      console.error("❌ Error fetching question statistics:", error);
+    }
+  };
+
+  useEffect(() => {
+    // Fetch statistics for current question when completed, in review, or submitted
+    const shouldFetch =
+      (isCompleted || isReview || selectedQuestion?.submitted) &&
+      selectedQuestion?.originalId &&
+      !questionStatistics[selectedQuestion.originalId];
+
+    console.log("🔄 useEffect triggered:", {
+      isCompleted,
+      isReview,
+      isSubmitted: selectedQuestion?.submitted,
+      originalId: selectedQuestion?.originalId,
+      hasStats: selectedQuestion?.originalId
+        ? !!questionStatistics[selectedQuestion.originalId]
+        : false,
+      shouldFetch,
+    });
+
+    if (shouldFetch) {
+      console.log("📥 Fetching statistics for question");
+      fetchQuestionStatistics(selectedQuestion.originalId);
+    }
+  }, [selectedQuestion, isCompleted, isReview]);
+
+  // Fallback fetch: ensure stats are fetched at least once when a question changes
+  useEffect(() => {
+    if (
+      selectedQuestion?.originalId &&
+      !questionStatistics[selectedQuestion.originalId]
+    ) {
+      console.log("📥 Fallback fetch for question statistics");
+      fetchQuestionStatistics(selectedQuestion.originalId);
+    }
+  }, [selectedQuestion]);
   const optionLabels = ["A", "B", "C", "D"];
 
   const formatTime = (seconds: number) => {
@@ -340,19 +446,41 @@ export default function Quiz({
               )}
             </div>
           </div>
-          <button
-            onClick={addedToFavorites ? removeFromFavorites : addToFavorites}
-          >
-            {addedToFavorites ? (
-              <img
-                src="/assets/img/heart_filled.png"
-                alt="Fav"
-                className="w-10"
-              />
-            ) : (
-              <img src="/assets/img/heart.png" alt="Fav" className="w-10" />
-            )}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsLabValuesModalOpen(true)}
+              className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                isLabValuesModalOpen
+                  ? "bg-[#277C72] text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              Labs
+            </button>
+            <button
+              onClick={() => setIsCalculatorOpen(!isCalculatorOpen)}
+              className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                isCalculatorOpen
+                  ? "bg-[#277C72] text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              Calculator
+            </button>
+            <button
+              onClick={addedToFavorites ? removeFromFavorites : addToFavorites}
+            >
+              {addedToFavorites ? (
+                <img
+                  src="/assets/img/heart_filled.png"
+                  alt="Fav"
+                  className="w-10"
+                />
+              ) : (
+                <img src="/assets/img/heart.png" alt="Fav" className="w-10" />
+              )}
+            </button>
+          </div>
         </div>
         <div className="flex gap-10">
           <div className="w-[28%] border border-b-0 border-[#3E3E3E] rounded-[25px] flex justify-center pb-12 pt-3 mb-[-40px]">
@@ -520,6 +648,28 @@ export default function Quiz({
                 <div className="mt-4 flex flex-col gap-2">
                   {selectedQuestion?.options.map((option, index) => {
                     const isSubmitted = selectedQuestion.submitted;
+                    const stats = selectedQuestion?.originalId
+                      ? questionStatistics[selectedQuestion.originalId]
+                      : null;
+                    const optionStat = stats?.options?.find(
+                      (opt: any) => opt.index === index
+                    );
+                    const percentage = optionStat?.percentage || 0;
+
+                    // Debug logging for first option only
+                    if (index === 0) {
+                      console.log("🎯 Rendering options:", {
+                        questionId: selectedQuestion?._id,
+                        originalId: selectedQuestion?.originalId,
+                        isCompleted,
+                        isReview,
+                        isSubmitted,
+                        hasStats: !!stats,
+                        stats,
+                        percentage,
+                      });
+                    }
+
                     return (
                       <div
                         key={index}
@@ -544,11 +694,19 @@ export default function Quiz({
                           }
                         }}
                       >
-                        <div className="flex items-center gap-5 px-2">
-                          <div className="bg-[#EF6A77] min-w-8 min-h-8 rounded-[50%] text-white flex justify-center items-center">
-                            {optionLabels[index]}
+                        <div className="flex items-center justify-between gap-5 px-2">
+                          <div className="flex items-center gap-5">
+                            <div className="bg-[#EF6A77] min-w-8 min-h-8 rounded-[50%] text-white flex justify-center items-center">
+                              {optionLabels[index]}
+                            </div>
+                            <div>{option.name}</div>
                           </div>
-                          <div>{option.name}</div>
+                          {/* Show percentages for completed/review OR submitted questions with stats */}
+                          {(isCompleted || isReview || isSubmitted) && (
+                            <div className="text-sm font-medium">
+                              ({percentage}% Choose This Option)
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -620,6 +778,14 @@ export default function Quiz({
           type="question"
           userId={user?.displayId}
           id={selectedQuestion?.displayId}
+        />
+        <LabValuesModal
+          isModalVisible={isLabValuesModalOpen}
+          setIsModalVisible={setIsLabValuesModalOpen}
+        />
+        <Calculator
+          isOpen={isCalculatorOpen}
+          onClose={() => setIsCalculatorOpen(false)}
         />
       </div>
     );

@@ -9,6 +9,8 @@ import Actions from "@/frontend/components/upload/add-question/components/add-qu
 import { Dispatch, SetStateAction, useEffect } from "react";
 
 import * as pdfjsLib from "pdfjs-dist/webpack.mjs";
+import Papa from "papaparse";
+import toast from "react-hot-toast";
 
 const addBtnStyle = {
   background: "#01B067",
@@ -195,104 +197,349 @@ export default function AddQuestion({
     });
   };
 
+  // Extract correct answer letter from various formats: "C) 30-50%", "C", "Option C"
+  const extractCorrectAnswerLetter = (correctAnswer: string): string | null => {
+    if (!correctAnswer) return null;
+    
+    // Remove whitespace
+    const trimmed = correctAnswer.trim();
+    
+    // Match patterns like "C) 30-50%", "C)", "C"
+    const letterMatch = trimmed.match(/^([A-E])/i);
+    if (letterMatch) {
+      return letterMatch[1].toUpperCase();
+    }
+    
+    // Match "Option C" format
+    const optionMatch = trimmed.match(/option\s+([A-E])/i);
+    if (optionMatch) {
+      return optionMatch[1].toUpperCase();
+    }
+    
+    return null;
+  };
+
+  // Parse CSV file and convert to question objects
+  const parseCSVFile = async (file: File, categories: any[]): Promise<any[]> => {
+    return new Promise((resolve, reject) => {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          try {
+            // Validate CSV has data
+            if (!results.data || results.data.length === 0) {
+              reject(new Error("CSV file is empty or has no valid rows"));
+              return;
+            }
+
+            // Validate required columns exist
+            const requiredColumns = ["Question"];
+            const firstRow = results.data[0] as any;
+            const missingColumns = requiredColumns.filter(
+              (col) => !firstRow.hasOwnProperty(col)
+            );
+            if (missingColumns.length > 0) {
+              reject(
+                new Error(
+                  `Missing required columns: ${missingColumns.join(", ")}`
+                )
+              );
+              return;
+            }
+
+            const questions = [];
+            const errors: string[] = [];
+            const warnings: string[] = [];
+
+            results.data.forEach((row: any, index: number) => {
+              try {
+                // Validate required fields
+                if (!row.Question || !row.Question.trim()) {
+                  errors.push(`Row ${index + 2}: Missing Question field`);
+                  return;
+                }
+
+                // Build options array from OptionA-E
+                const options = [];
+                const optionKeys = ["OptionA", "OptionB", "OptionC", "OptionD", "OptionE"];
+
+                optionKeys.forEach((key) => {
+                  if (row[key] && row[key].trim()) {
+                    options.push({
+                      name: row[key].trim(),
+                      isCorrect: false,
+                    });
+                  }
+                });
+
+                // Validate at least 2 options
+                if (options.length < 2) {
+                  errors.push(`Row ${index + 2}: Need at least 2 options`);
+                  return;
+                }
+
+                // Extract and set correct answer
+                const correctAnswerLetter = extractCorrectAnswerLetter(
+                  row.CorrectAnswer || ""
+                );
+                if (correctAnswerLetter) {
+                  const optionIndex = "ABCDE".indexOf(correctAnswerLetter);
+                  if (optionIndex >= 0 && optionIndex < options.length) {
+                    options[optionIndex].isCorrect = true;
+                  } else {
+                    warnings.push(
+                      `Row ${index + 2}: Invalid correct answer "${row.CorrectAnswer}" - answer not set`
+                    );
+                  }
+                } else if (row.CorrectAnswer) {
+                  warnings.push(
+                    `Row ${index + 2}: Could not extract correct answer from "${row.CorrectAnswer}"`
+                  );
+                } else {
+                  warnings.push(`Row ${index + 2}: No correct answer specified`);
+                }
+
+                // Parse tags/categories
+                const tagCategories = [];
+                if (row.Tags) {
+                  const tags = row.Tags.split(",")
+                    .map((tag: string) => tag.trim())
+                    .filter((tag: string) => tag);
+                  tags.forEach((tagName: string) => {
+                    // Try to find existing category
+                    const existingCategory = categories.find(
+                      (cat: any) => cat.name.toLowerCase() === tagName.toLowerCase()
+                    );
+                    if (existingCategory) {
+                      tagCategories.push(existingCategory);
+                    } else {
+                      // Create category object (will need to be created in backend if doesn't exist)
+                      tagCategories.push({
+                        _id: null,
+                        name: tagName,
+                      });
+                    }
+                  });
+                }
+
+                // Convert difficulty to lowercase
+                let difficultyLevel = "medium"; // default
+                if (row.Difficulty) {
+                  const difficulty = row.Difficulty.trim().toLowerCase();
+                  if (["easy", "medium", "hard"].includes(difficulty)) {
+                    difficultyLevel = difficulty;
+                  } else {
+                    warnings.push(
+                      `Row ${index + 2}: Invalid difficulty "${row.Difficulty}", using "medium" as default`
+                    );
+                  }
+                }
+
+                // Build topic from Topic and Subtopic
+                let topic = row.Topic || "";
+                if (row.Subtopic && row.Subtopic.trim()) {
+                  topic = topic
+                    ? `${topic} - ${row.Subtopic.trim()}`
+                    : row.Subtopic.trim();
+                }
+                if (!topic) {
+                  topic = file.name.replace(/_/g, " ").replace(/\.[^/.]+$/, "");
+                }
+
+                // Create question object
+                questions.push({
+                  _id: `csv-${index + 1}`,
+                  name: `Question #${index + 1}`,
+                  statement: row.Question.trim(),
+                  categories: tagCategories,
+                  options,
+                  difficultyLevel,
+                  topic,
+                  explanation: row.Explanation ? row.Explanation.trim() : "",
+                  reference: row.Tags || row.Subject || "",
+                  saved: false,
+                });
+              } catch (error) {
+                errors.push(
+                  `Row ${index + 2}: ${error instanceof Error ? error.message : "Unknown error"}`
+                );
+              }
+            });
+
+            // Show warnings and errors to user
+            if (warnings.length > 0) {
+              console.warn("CSV parsing warnings:", warnings);
+              toast(
+                `${warnings.length} warning(s) found. Check console for details.`,
+                { icon: "⚠️" }
+              );
+            }
+
+            if (errors.length > 0) {
+              console.error("CSV parsing errors:", errors);
+              toast.error(
+                `${errors.length} error(s) found. ${questions.length} question(s) parsed successfully. Check console for details.`
+              );
+            }
+
+            if (questions.length === 0) {
+              reject(
+                new Error(
+                  "No valid questions found in CSV file. Please check the file format."
+                )
+              );
+              return;
+            }
+
+            toast.success(
+              `Successfully parsed ${questions.length} question(s) from CSV file.`
+            );
+            resolve(questions);
+          } catch (error) {
+            reject(error);
+          }
+        },
+        error: (error) => {
+          reject(new Error(`CSV parsing error: ${error.message}`));
+        },
+      });
+    });
+  };
+
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
 
-    if (file) {
-      const reader = new FileReader();
+    if (!file) return;
 
-      reader.onload = async (e) => {
-        const typedArray = new Uint8Array(e.target.result);
+    const fileExtension = file.name.split(".").pop()?.toLowerCase();
 
+    try {
+      if (fileExtension === "csv") {
+        // Handle CSV file
         try {
-          const pdf = await pdfjsLib.getDocument(typedArray).promise;
-          let extractedText = "";
+          const parsedQuestions = await parseCSVFile(file, categories);
+          setQuestions(parsedQuestions);
+          setIsBulkMode(true);
+          setCurrentQuestionIndex(0);
+          console.log("Parsed CSV Questions:", parsedQuestions);
+        } catch (error) {
+          console.error("Error parsing CSV:", error);
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Error parsing CSV file. Please check the file format."
+          );
+        }
+      } else if (fileExtension === "pdf") {
+        // Handle PDF file (existing logic)
+        const reader = new FileReader();
 
-          // Extract text from each page
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items
-              .map((item) => item.str)
-              .join(" ");
-            extractedText += pageText + "\n";
-          }
+        reader.onload = async (e) => {
+          const typedArray = new Uint8Array(e.target.result);
 
-          console.log("Extracted text:", extractedText);
+          try {
+            const pdf = await pdfjsLib.getDocument(typedArray).promise;
+            let extractedText = "";
 
-          // Preprocess text: Remove unnecessary line breaks and join lines
-          const preprocessedText = extractedText
-            .replace(/\n/g, " ") // Replace line breaks with spaces
-            .replace(/\s{2,}/g, " ") // Remove extra spaces
-            .replace(/(\d+\.\s+)/g, "\n$1") // Add line breaks before each question number
-            .trim();
+            // Extract text from each page
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const page = await pdf.getPage(i);
+              const textContent = await page.getTextContent();
+              const pageText = textContent.items
+                .map((item) => item.str)
+                .join(" ");
+              extractedText += pageText + "\n";
+            }
 
-          console.log("Preprocessed text:", preprocessedText);
+            console.log("Extracted text:", extractedText);
 
-          // Parse questions
-          const questions = [];
-          const questionBlocks = preprocessedText.split("\n");
+            // Preprocess text: Remove unnecessary line breaks and join lines
+            const preprocessedText = extractedText
+              .replace(/\n/g, " ") // Replace line breaks with spaces
+              .replace(/\s{2,}/g, " ") // Remove extra spaces
+              .replace(/(\d+\.\s+)/g, "\n$1") // Add line breaks before each question number
+              .trim();
 
-          questionBlocks.forEach((block) => {
-            // Updated regex to match multiple question formats: "Q-1:", "1.", etc.
-            const questionMatch = block.match(
-              /^(?:\d+\:|\d+\.)\s+(.*?)(?=a\)|Key:|$)/i
-            );
-            if (questionMatch) {
-              const statement = questionMatch[1].trim();
+            console.log("Preprocessed text:", preprocessedText);
 
-              // Match options
-              const optionsText = block.slice(questionMatch[0].length); // Remaining text after statement
-              const options = [];
-              const optionMatches = optionsText.matchAll(
-                /([a-e])\)\s+(.*?)(?=[a-e]\)|Key:|$)/gi
+            // Parse questions
+            const questions = [];
+            const questionBlocks = preprocessedText.split("\n");
+
+            questionBlocks.forEach((block) => {
+              // Updated regex to match multiple question formats: "Q-1:", "1.", etc.
+              const questionMatch = block.match(
+                /^(?:\d+\:|\d+\.)\s+(.*?)(?=a\)|Key:|$)/i
               );
-              for (const match of optionMatches) {
-                options.push({
-                  name: match[2].trim(),
-                  isCorrect: false, // Default to false, will update later if matched with the key
+              if (questionMatch) {
+                const statement = questionMatch[1].trim();
+
+                // Match options
+                const optionsText = block.slice(questionMatch[0].length); // Remaining text after statement
+                const options = [];
+                const optionMatches = optionsText.matchAll(
+                  /([a-e])\)\s+(.*?)(?=[a-e]\)|Key:|$)/gi
+                );
+                for (const match of optionMatches) {
+                  options.push({
+                    name: match[2].trim(),
+                    isCorrect: false, // Default to false, will update later if matched with the key
+                  });
+                }
+
+                // Match the key
+                const keyMatch = block.match(/Key:\s+([a-e])/i);
+                if (keyMatch) {
+                  const correctAnswer = keyMatch[1].toLowerCase();
+                  const correctOptionIndex = "abcde".indexOf(correctAnswer);
+                  if (options[correctOptionIndex]) {
+                    options[correctOptionIndex].isCorrect = true;
+                  }
+                }
+
+                // Match the reference (supports both Ref: and Reference:)
+                const refMatch = block.match(/(?:Ref:|Reference:)\s+(.*)$/i);
+                const reference = refMatch ? refMatch[1].trim() : "";
+
+                // Add the parsed question to the array
+                questions.push({
+                  _id: `${questions.length + 1}`,
+                  name: `Question #${questions.length + 1}`,
+                  statement,
+                  categories: [],
+                  options,
+                  difficultyLevel: "medium", // Default difficulty level
+                  topic: file.name.replace(/_/g, " ").replace(/\.[^/.]+$/, ""),
+                  explanation: "Understanding the question is part of the exam.",
+                  reference,
+                  saved: false,
                 });
               }
+            });
 
-              // Match the key
-              const keyMatch = block.match(/Key:\s+([a-e])/i);
-              if (keyMatch) {
-                const correctAnswer = keyMatch[1].toLowerCase();
-                const correctOptionIndex = "abcde".indexOf(correctAnswer);
-                if (options[correctOptionIndex]) {
-                  options[correctOptionIndex].isCorrect = true;
-                }
-              }
+            setQuestions(questions);
+            setIsBulkMode(true);
+            setCurrentQuestionIndex(0);
+            console.log("Parsed PDF Questions:", questions);
+            toast.success(
+              `Successfully parsed ${questions.length} question(s) from PDF file.`
+            );
+          } catch (error) {
+            console.error("Error parsing PDF:", error);
+            toast.error("Error parsing PDF file. Please check the file format.");
+          }
+        };
 
-              // Match the reference (supports both Ref: and Reference:)
-              const refMatch = block.match(/(?:Ref:|Reference:)\s+(.*)$/i);
-              const reference = refMatch ? refMatch[1].trim() : "";
-
-              // Add the parsed question to the array
-              questions.push({
-                _id: `${questions.length + 1}`,
-                name: `Question #${questions.length + 1}`,
-                statement,
-                categories: [],
-                options,
-                difficultyLevel: "medium", // Default difficulty level
-                topic: file.name.replace(/_/g, " ").replace(/\.[^/.]+$/, ""),
-                explanation: "Understanding the question is part of the exam.",
-                reference,
-                saved: false,
-              });
-            }
-          });
-
-          setQuestions(questions);
-          setIsBulkMode(true);
-          console.log("Parsed Questions:", questions);
-        } catch (error) {
-          console.error("Error parsing PDF:", error);
-        }
-      };
-
-      reader.readAsArrayBuffer(file);
+        reader.readAsArrayBuffer(file);
+      } else {
+        toast.error("Unsupported file type. Please upload a PDF or CSV file.");
+      }
+    } catch (error) {
+      console.error("Error processing file:", error);
+      toast.error(
+        `Error processing file: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     }
   };
 
@@ -380,7 +627,7 @@ export default function AddQuestion({
                     type="file"
                     id="bulkFileInput"
                     style={{ display: "none" }}
-                    accept=".pdf"
+                    accept=".pdf,.csv"
                     onChange={(e) => handleFileUpload(e)}
                     onClick={(e) => {
                       const target = e.target as HTMLInputElement;

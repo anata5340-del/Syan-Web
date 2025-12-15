@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import axios from "axios";
 
 interface Module {
   title: string;
@@ -20,6 +21,7 @@ interface Question {
   correctOption: number;
   explanation: string;
   reference: string;
+  questionId?: string; // Optional real question ID for statistics
 }
 
 export default function ReviewQuiz() {
@@ -31,6 +33,9 @@ export default function ReviewQuiz() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [questionStatistics, setQuestionStatistics] = useState<
+    Record<string, any>
+  >({});
 
   useEffect(() => {
     const fetchedModule = {
@@ -157,6 +162,26 @@ export default function ReviewQuiz() {
 
   const optionLabels = ["A", "B", "C", "D"];
 
+  const fetchQuestionStatistics = async (questionId: string) => {
+    try {
+      const { data } = await axios.get(`/api/questions/${questionId}/statistics`);
+      setQuestionStatistics((prev) => ({
+        ...prev,
+        [questionId]: data,
+      }));
+    } catch (error) {
+      console.error("Error fetching question statistics:", error);
+    }
+  };
+
+  useEffect(() => {
+    // Fetch statistics for current question if it has a questionId
+    const currentQuestion = questions[currentQuestionIndex];
+    if (currentQuestion?.questionId && !questionStatistics[currentQuestion.questionId]) {
+      fetchQuestionStatistics(currentQuestion.questionId);
+    }
+  }, [currentQuestionIndex, questions]);
+
   return (
     <div className="">
       <div className="flex justify-between mt-4">
@@ -272,35 +297,53 @@ export default function ReviewQuiz() {
                 </p>
                 <div className="mt-4 flex flex-col gap-2">
                   {questions[currentQuestionIndex]?.options.map(
-                    (option, index) => (
-                      <div
-                        key={index}
-                        className={`border-[0.7px] border-[#3E3E3E] rounded-[15px] w-[70%] py-1 cursor-pointer ${
-                          index ===
-                          questions[currentQuestionIndex]?.correctOption
-                            ? "bg-[#02DC81]"
-                            : index === selectedOption
-                            ? "bg-[#EF6A77]"
-                            : ""
-                        }`}
-                        onClick={() => setSelectedOption(index)}
-                        style={{ pointerEvents: "none" }}
-                      >
-                        <div className="flex items-center gap-5 px-2">
-                          <div
-                            className={`w-8 h-8 rounded-[50%] text-white flex justify-center items-center ${
-                              index ===
-                              questions[currentQuestionIndex]?.correctOption
-                                ? "bg-[#02DC81]"
-                                : "bg-[#EF6A77]"
-                            }`}
-                          >
-                            {optionLabels[index]}
+                    (option, index) => {
+                      const currentQuestion = questions[currentQuestionIndex];
+                      const stats = currentQuestion?.questionId
+                        ? questionStatistics[currentQuestion.questionId]
+                        : null;
+                      const optionStat = stats?.options?.find(
+                        (opt: any) => opt.index === index
+                      );
+                      const percentage = optionStat?.percentage || 0;
+                      return (
+                        <div
+                          key={index}
+                          className={`border-[0.7px] border-[#3E3E3E] rounded-[15px] w-[70%] py-1 cursor-pointer ${
+                            index ===
+                            questions[currentQuestionIndex]?.correctOption
+                              ? "bg-[#02DC81]"
+                              : index === selectedOption
+                              ? "bg-[#EF6A77]"
+                              : ""
+                          }`}
+                          onClick={() => setSelectedOption(index)}
+                          style={{ pointerEvents: "none" }}
+                        >
+                          <div className="flex items-center justify-between gap-5 px-2">
+                            <div className="flex items-center gap-5">
+                              <div
+                                className={`w-8 h-8 rounded-[50%] text-white flex justify-center items-center ${
+                                  index ===
+                                  questions[currentQuestionIndex]?.correctOption
+                                    ? "bg-[#02DC81]"
+                                    : "bg-[#EF6A77]"
+                                }`}
+                              >
+                                {optionLabels[index]}
+                              </div>
+                              <div>{option}</div>
+                            </div>
+                            {stats && (
+                              <div className="text-sm font-medium">
+                                {percentage}% ({percentage}% of users selected
+                                this option)
+                              </div>
+                            )}
                           </div>
-                          <div>{option}</div>
                         </div>
-                      </div>
-                    )
+                      );
+                    }
                   )}
                 </div>
                 <div className="flex justify-between gap-4">

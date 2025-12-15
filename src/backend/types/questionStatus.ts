@@ -4,4 +4,5 @@ export type QuestionStatus = {
   questionId: string;
   questionName: string;
   correct: boolean;
+  selectedOption?: number;
 };

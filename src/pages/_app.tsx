@@ -6,6 +6,7 @@ import { BaseLayout } from "@/frontend/components/layout/base";
 import { Toaster } from "react-hot-toast";
 import Cookies from "cookies";
 import { useEffect, useState } from "react";
+import { QuizContextProvider } from "@/frontend/contexts/QuizContext";
 
 const poppins = Poppins({
   weight: ["400", "500", "600", "700", "800", "900"],
@@ -20,10 +21,12 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <div className={poppins.className}>
       <AntdRegistry>
-        <BaseLayout>
-          <Toaster />
-          <Component {...pageProps} />
-        </BaseLayout>
+        <QuizContextProvider>
+          <BaseLayout>
+            <Toaster />
+            <Component {...pageProps} />
+          </BaseLayout>
+        </QuizContextProvider>
       </AntdRegistry>
     </div>
   );
