@@ -19,15 +19,15 @@ self.__BUILD_MANIFEST = {
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
-    "/user/quiz/[id]": [
+    "/admin": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/user/quiz/[id].js"
+      "static/chunks/pages/admin.js"
     ],
-    "/user/quiz/[id]/library/[paperId]": [
+    "/login": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/user/quiz/[id]/library/[paperId].js"
+      "static/chunks/pages/login.js"
     ]
   },
   "ampFirstPages": []

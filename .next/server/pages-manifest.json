@@ -2,8 +2,8 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/user/quiz/[id]/library/[paperId]": "pages/user/quiz/[id]/library/[paperId].js",
-  "/user/quiz/[id]": "pages/user/quiz/[id].js",
-  "/api/users/question-status": "pages/api/users/question-status.js",
-  "/api/users/quiz-status": "pages/api/users/quiz-status.js"
+  "/login": "pages/login.js",
+  "/api/users/login": "pages/api/users/login.js",
+  "/admin": "pages/admin.js",
+  "/api/users": "pages/api/users.js"
 }
