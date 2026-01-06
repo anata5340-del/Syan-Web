@@ -22,15 +22,20 @@
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
-    "/admin": [
+    "/unauthorized": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/admin.js"
+      "static/chunks/pages/unauthorized.js"
     ],
-    "/login": [
+    "/user/videoCourses/[id]/modules/dashboard/notes/[noteId]": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/login.js"
+      "static/chunks/pages/user/videoCourses/[id]/modules/dashboard/notes/[noteId].js"
+    ],
+    "/user/videoCourses/[id]/modules/dashboard/videos/[videoId]": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/user/videoCourses/[id]/modules/dashboard/videos/[videoId].js"
     ]
   },
   "ampFirstPages": []

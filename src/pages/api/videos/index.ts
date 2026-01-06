@@ -4,6 +4,7 @@ import {
   createVideoValidator,
   updateVideoValidator,
 } from "@/backend/validators/videos";
+import { importVideoFromS3 } from "@/backend/services/gumlet";
 import { NextApiRequest, NextApiResponse } from "next";
 import { createRouter } from "next-connect";
 // import { upload } from "@/backend/middlewares/multer/upload";
@@ -47,6 +48,30 @@ router
         videoSource,
         pdfSource,
       });
+
+      // Import video to Gumlet asynchronously (don't block video creation)
+      if (videoSource && !videoSource.startsWith("http://") && !videoSource.startsWith("https://")) {
+        // Skip if it's not a URL (might be a file path)
+        console.log("Skipping Gumlet import - videoSource is not a URL:", videoSource);
+      } else if (videoSource) {
+        // Import to Gumlet in the background
+        importVideoFromS3({
+          sourceUrl: videoSource,
+          title: videoData.title || videoData.name || "Video",
+        })
+          .then((gumletVideoId) => {
+            // Update video with Gumlet video ID
+            updateVideo(video._id.toString(), {
+              gumletVideoId,
+            }).catch((error) => {
+              console.error("Error updating video with Gumlet ID:", error);
+            });
+          })
+          .catch((error) => {
+            // Log error but don't fail video creation
+            console.error("Error importing video to Gumlet:", error);
+          });
+      }
 
       res.status(201).json({ video });
     } catch (error) {

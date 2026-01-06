@@ -2,8 +2,13 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/login": "pages/login.js",
-  "/api/users/login": "pages/api/users/login.js",
-  "/admin": "pages/admin.js",
-  "/api/users": "pages/api/users.js"
+  "/user/videoCourses/[id]/modules/dashboard": "pages/user/videoCourses/[id]/modules/dashboard.js",
+  "/user/videoCourses/[id]/modules/dashboard/videos/[videoId]": "pages/user/videoCourses/[id]/modules/dashboard/videos/[videoId].js",
+  "/user/videoCourses/[id]/modules/dashboard/notes/[noteId]": "pages/user/videoCourses/[id]/modules/dashboard/notes/[noteId].js",
+  "/api/users/video-status": "pages/api/users/video-status.js",
+  "/api/videoCourses/[id]/modules/[moduleId]/section/[sectionId]/subSection/[subSectionId]": "pages/api/videoCourses/[id]/modules/[moduleId]/section/[sectionId]/subSection/[subSectionId].js",
+  "/api/videoCourses/[id]/modules/[moduleId]/section/[sectionId]/subSection/[subSectionId]/subSectionBlock/[subSectionBlockId]/video": "pages/api/videoCourses/[id]/modules/[moduleId]/section/[sectionId]/subSection/[subSectionId]/subSectionBlock/[subSectionBlockId]/video.js",
+  "/unauthorized": "pages/unauthorized.js",
+  "/api/users/note-status": "pages/api/users/note-status.js",
+  "/api/videoCourses/[id]/modules/[moduleId]/section/[sectionId]/subSection/[subSectionId]/subSectionBlock/[subSectionBlockId]/note": "pages/api/videoCourses/[id]/modules/[moduleId]/section/[sectionId]/subSection/[subSectionId]/subSectionBlock/[subSectionBlockId]/note.js"
 }

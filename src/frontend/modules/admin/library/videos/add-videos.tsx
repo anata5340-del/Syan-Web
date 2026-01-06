@@ -263,10 +263,13 @@ export default function AddVideos({
         ...fileUploads,
       };
 
-      await axios.post("/api/videos", { video: videoData });
+      const response = await axios.post("/api/videos", { video: videoData });
 
       refetch();
-      toast.success("Video Added Successfully");
+      toast.success("Video Added Successfully. Importing to Gumlet in the background...");
+      
+      // Note: Gumlet import happens asynchronously on the server
+      // The video will be updated with gumletVideoId once import completes
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.error || "Failed to add video");
