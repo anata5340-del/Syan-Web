@@ -403,7 +403,7 @@ module.exports = require("zlib");
 var __webpack_require__ = require("../webpack-runtime.js");
 __webpack_require__.C(exports);
 var __webpack_exec__ = (moduleId) => (__webpack_require__(__webpack_require__.s = moduleId))
-var __webpack_exports__ = __webpack_require__.X(0, ["vendor-chunks/next","vendor-chunks/@swc","vendor-chunks/antd","vendor-chunks/@ant-design","vendor-chunks/rc-util","vendor-chunks/@babel","vendor-chunks/rc-tooltip","vendor-chunks/rc-picker","vendor-chunks/rc-pagination"], () => (__webpack_exec__("./src/pages/_app.tsx")));
+var __webpack_exports__ = __webpack_require__.X(0, ["vendor-chunks/next","vendor-chunks/@swc","vendor-chunks/@ant-design","vendor-chunks/antd","vendor-chunks/rc-util","vendor-chunks/@babel","vendor-chunks/rc-pagination","vendor-chunks/rc-tooltip","vendor-chunks/rc-picker"], () => (__webpack_exec__("./src/pages/_app.tsx")));
 module.exports = __webpack_exports__;
 
 })();

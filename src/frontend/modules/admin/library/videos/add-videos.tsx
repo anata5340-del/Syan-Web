@@ -30,6 +30,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { File } from "buffer";
 import { id } from "date-fns/locale";
+import { extractGumletVideoId } from "@/backend/utils/gumletHelper";
 
 const addBtnStyle = {
   background: "#01B067",
@@ -234,7 +235,17 @@ export default function AddVideos({
         });
         fileUploads.videoSource = response.data.url;
       } else if (externalLink.trim() !== "") {
-        fileUploads.videoSource = externalLink;
+        // Check if the external link is a Gumlet embed URL
+        const gumletVideoId = extractGumletVideoId(externalLink);
+        if (gumletVideoId) {
+          // It's a Gumlet URL - extract and store the video ID
+          fileUploads.gumletVideoId = gumletVideoId;
+          fileUploads.videoSource = externalLink; // Store the original URL as videoSource
+          console.log("✅ Detected Gumlet URL, extracted video ID:", gumletVideoId);
+        } else {
+          // Regular external link - store as videoSource
+          fileUploads.videoSource = externalLink;
+        }
       }
 
       // Step 2: Prepare the updated video payload
@@ -266,9 +277,13 @@ export default function AddVideos({
       const response = await axios.post("/api/videos", { video: videoData });
 
       refetch();
-      toast.success("Video Added Successfully. Importing to Gumlet in the background...");
+      if (videoData.gumletVideoId) {
+        toast.success("Video Added Successfully with Gumlet video ID!");
+      } else {
+        toast.success("Video Added Successfully. Importing to Gumlet in the background...");
+      }
       
-      // Note: Gumlet import happens asynchronously on the server
+      // Note: Gumlet import happens asynchronously on the server (only if gumletVideoId is not provided)
       // The video will be updated with gumletVideoId once import completes
     } catch (error) {
       console.error(error);
@@ -336,8 +351,18 @@ export default function AddVideos({
         });
         fileUploads.videoSource = response.data.url;
       } else {
-        if (externalLink) {
-          fileUploads.videoSource = externalLink;
+        if (externalLink && externalLink.trim() !== "") {
+          // Check if the external link is a Gumlet embed URL
+          const gumletVideoId = extractGumletVideoId(externalLink);
+          if (gumletVideoId) {
+            // It's a Gumlet URL - extract and store the video ID
+            fileUploads.gumletVideoId = gumletVideoId;
+            fileUploads.videoSource = externalLink; // Store the original URL as videoSource
+            console.log("✅ Detected Gumlet URL, extracted video ID:", gumletVideoId);
+          } else {
+            // Regular external link - store as videoSource
+            fileUploads.videoSource = externalLink;
+          }
         }
       }
 

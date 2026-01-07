@@ -55,6 +55,19 @@ export default function Videos({
   subSectionBlockName,
 }: Props) {
   const router = useRouter();
+
+  // Log initial props
+  console.log("🎬 Videos component initialized with props:", {
+    videoId,
+    noteId,
+    courseId,
+    moduleId,
+    sectionId,
+    subSectionId,
+    subSectionBlockId,
+    subSectionBlockName,
+    currentPath: router.asPath,
+  });
   // const [module, setModule] = useState<Module | null>(null);
   const [video, setVideo] = useState<Video | null>(null);
   const { user, favourites, getFavourites, setFavourites } = userStore();
@@ -108,9 +121,18 @@ export default function Videos({
       const { data } = await axios.get(
         `/api/videoCourses/${courseId}/modules/${moduleId}/section/${sectionId}/subSection/${subSectionId}/subSectionBlock/${subSectionBlockId}/video`
       );
+      console.log("📹 Video data received:", {
+        videoId: data.video?._id,
+        title: data.video?.title,
+        gumletVideoId: data.video?.gumletVideoId,
+        videoSource: data.video?.videoSource,
+        hasContent: !!data.video?.content,
+        contentCount: data.video?.content?.length,
+        fullVideoData: data.video,
+      });
       setVideo(data.video);
     } catch (error) {
-      console.error("getVideo error ", error);
+      console.error("❌ getVideo error ", error);
     }
   };
   useEffect(() => {
@@ -145,11 +167,25 @@ export default function Videos({
   }, [video]);
 
   useEffect(() => {
+    console.log("🔄 Video state changed:", {
+      videoId: video?._id,
+      videoTitle: video?.title,
+      hasGumletId: !!video?.gumletVideoId,
+      gumletVideoId: video?.gumletVideoId,
+      hasVideoSource: !!video?.videoSource,
+      videoSource: video?.videoSource,
+    });
+
     fetchVideoStatus();
     if (favourites && video?._id) {
-      setAddedToFavourites(
-        favourites.favouriteVideos.some((v) => v.video?._id === video._id)
+      const isFavourite = favourites.favouriteVideos.some(
+        (v) => v.video?._id === video._id
       );
+      console.log("❤️ Favourite status:", {
+        isFavourite,
+        videoId: video._id,
+      });
+      setAddedToFavourites(isFavourite);
     } else {
       setAddedToFavourites(false);
     }
@@ -162,10 +198,22 @@ export default function Videos({
       const { data } = await axios.get(
         `/api/users/video-status?videoId=${videoId}`
       );
+      console.log("📊 Video status data received:", {
+        videoStatusesCount: data.videoStatuses?.length,
+        allVideoStatuses: data.videoStatuses,
+        currentVideoId: video?._id,
+        videoIdParam: videoId,
+      });
 
       const videoStatus = data.videoStatuses.find(
         (status: { videoId: string }) => status.videoId === video?._id
       );
+      console.log("🔍 Matching videoStatus:", {
+        found: !!videoStatus,
+        videoStatus: videoStatus,
+        searchedVideoId: video?._id,
+      });
+
       // Create a map of `contentId` to its `completed` status from the API response
       if (videoStatus) {
         // Create a map of `contentId` to its `completed` status from the matched videoStatus
@@ -187,9 +235,21 @@ export default function Videos({
             })
             .filter((index) => index !== null) || [];
 
+        console.log("✅ Checked items set:", {
+          completedContentIndexes,
+          checkedItemsCount: completedContentIndexes.length,
+        });
         setCheckedItems(completedContentIndexes as number[]);
       } else {
-        console.warn("No matching videoStatus found for videoId:", video?._id);
+        // No videoStatus found - this is normal for first-time viewers
+        console.log(
+          "ℹ️ No videoStatus found (first view) - initializing with empty checked items:",
+          {
+            videoId: video?._id,
+            videoName: video?.name,
+          }
+        );
+        setCheckedItems([]);
       }
     } catch (error) {
       console.error("fetchVideoStatus Error:", error);
@@ -221,7 +281,12 @@ export default function Videos({
     }
   };
 
-  const handleProgress = ({ seconds: currentSeconds }: { seconds: number; duration: number }) => {
+  const handleProgress = ({
+    seconds: currentSeconds,
+  }: {
+    seconds: number;
+    duration: number;
+  }) => {
     video?.content.forEach((item, index) => {
       const brokenTime = item.endTime.split(":").map(Number); // Convert time to [hours, minutes, seconds]
       const [hours = 0, minutes = 0, seconds = 0] = brokenTime;
@@ -347,6 +412,12 @@ export default function Videos({
       const { data } = await axios.get(
         `/api/videoCourses/${courseId}/modules/${moduleId}/section/${sectionId}/subSection/${subSectionId}`
       );
+      console.log("📚 SubSection data received:", {
+        subSectionId,
+        subSectionBlockId,
+        subSectionBlocks: data.subSection?.subSectionBlocks,
+        subSectionData: data.subSection,
+      });
 
       // Assuming `data.subSection.subSectionBlocks` is the array you provided
       const subSectionBlocks = data.subSection.subSectionBlocks;
@@ -355,14 +426,23 @@ export default function Videos({
       const selectedBlock = subSectionBlocks.find(
         (block) => block._id === subSectionBlockId
       );
+      console.log("🎯 Selected block:", {
+        found: !!selectedBlock,
+        blockId: subSectionBlockId,
+        blockData: selectedBlock,
+      });
 
       // Extract the questions array or set to an empty array if not found
       const selectedQuestions = selectedBlock ? selectedBlock.questions : [];
+      console.log("❓ Selected questions:", {
+        count: selectedQuestions.length,
+        questions: selectedQuestions,
+      });
 
       setSelectedQuestions(selectedQuestions);
       return selectedQuestions;
     } catch (error) {
-      console.error("Error getting subSection:", error);
+      console.error("❌ Error getting subSection:", error);
       return [];
     }
   };
@@ -569,7 +649,11 @@ export default function Videos({
                 preload={false}
                 muted={false}
                 disable_player_controls={false}
-                thumbnail={video?.thumbnail ? encodeURIComponent(video.thumbnail) : undefined}
+                thumbnail={
+                  video?.thumbnail
+                    ? encodeURIComponent(video.thumbnail)
+                    : undefined
+                }
                 onReady={() => console.log("Player is ready")}
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
