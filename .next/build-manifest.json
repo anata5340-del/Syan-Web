@@ -22,15 +22,60 @@
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
-    "/user/quiz/[id]": [
+    "/admin": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/user/quiz/[id].js"
+      "static/chunks/pages/admin.js"
     ],
-    "/user/quiz/[id]/library/[paperId]": [
+    "/admin/library": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/user/quiz/[id]/library/[paperId].js"
+      "static/chunks/pages/admin/library.js"
+    ],
+    "/admin/videoCourses": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/admin/videoCourses.js"
+    ],
+    "/admin/videoCourses/modules": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/admin/videoCourses/modules.js"
+    ],
+    "/admin/videoCourses/modules/addContent": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/admin/videoCourses/modules/addContent.js"
+    ],
+    "/login": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/login.js"
+    ],
+    "/user": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/user.js"
+    ],
+    "/user/videoCourses": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/user/videoCourses.js"
+    ],
+    "/user/videoCourses/[id]/modules": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/user/videoCourses/[id]/modules.js"
+    ],
+    "/user/videoCourses/[id]/modules/dashboard": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/user/videoCourses/[id]/modules/dashboard.js"
+    ],
+    "/user/videoCourses/[id]/modules/dashboard/videos/[videoId]": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/user/videoCourses/[id]/modules/dashboard/videos/[videoId].js"
     ]
   },
   "ampFirstPages": []

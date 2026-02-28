@@ -63,6 +63,10 @@ if (mongoose.models.videos) {
         type: String,
         required: true,
       },
+      gumletVideoId: {
+        type: String,
+        required: false,
+      },
       content: [ContentSchema],
     },
     { timestamps: true }

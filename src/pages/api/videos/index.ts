@@ -4,6 +4,7 @@ import {
   createVideoValidator,
   updateVideoValidator,
 } from "@/backend/validators/videos";
+import { importVideoFromS3 } from "@/backend/services/gumlet";
 import { NextApiRequest, NextApiResponse } from "next";
 import { createRouter } from "next-connect";
 // import { upload } from "@/backend/middlewares/multer/upload";
@@ -27,7 +28,7 @@ router
   .post(async (req: NextApiRequest, res: NextApiResponse) => {
     await connectDB();
     try {
-      const { thumbnail, videoSource, pdfSource, ...videoData } =
+      const { thumbnail, videoSource, pdfSource, gumletVideoId, ...videoData } =
         req.body.video;
 
       // Ensure required files are uploaded
@@ -46,7 +47,35 @@ router
         thumbnail,
         videoSource,
         pdfSource,
+        ...(gumletVideoId && { gumletVideoId }), // Include gumletVideoId if provided
       });
+
+      // Import video to Gumlet asynchronously (don't block video creation)
+      // Skip Gumlet import if gumletVideoId is already provided (e.g., from external Gumlet link)
+      if (gumletVideoId) {
+        console.log("Skipping Gumlet import - gumletVideoId already provided:", gumletVideoId);
+      } else if (videoSource && !videoSource.startsWith("http://") && !videoSource.startsWith("https://")) {
+        // Skip if it's not a URL (might be a file path)
+        console.log("Skipping Gumlet import - videoSource is not a URL:", videoSource);
+      } else if (videoSource) {
+        // Import to Gumlet in the background
+        importVideoFromS3({
+          sourceUrl: videoSource,
+          title: videoData.title || videoData.name || "Video",
+        })
+          .then((gumletVideoId) => {
+            // Update video with Gumlet video ID
+            updateVideo(video._id.toString(), {
+              gumletVideoId,
+            }).catch((error) => {
+              console.error("Error updating video with Gumlet ID:", error);
+            });
+          })
+          .catch((error) => {
+            // Log error but don't fail video creation
+            console.error("Error importing video to Gumlet:", error);
+          });
+      }
 
       res.status(201).json({ video });
     } catch (error) {
@@ -80,7 +109,7 @@ router
     await connectDB();
     try {
       const { id, video } = req.body; // Extract the video ID and payload from the body
-      const { thumbnail, videoSource, pdfSource, ...rest } = video;
+      const { thumbnail, videoSource, pdfSource, gumletVideoId, ...rest } = video;
 
       // Validate the payload
       await updateVideoValidator(req.body);
@@ -91,6 +120,7 @@ router
         ...(thumbnail && { thumbnail }), // Update thumbnail URL if provided
         ...(videoSource && { videoSource }), // Update video source URL if provided
         ...(pdfSource && { pdfSource }), // Update PDF source URL if provided
+        ...(gumletVideoId && { gumletVideoId }), // Update Gumlet video ID if provided
       });
 
       res.status(200).json({ video: updatedVideo });

@@ -12,6 +12,7 @@ export type Video = {
   thumbnail: string;
   pdfSource: string;
   description: string;
+  gumletVideoId?: string;
   content?: {
     name: string;
     startTime: string;
@@ -30,6 +31,7 @@ export type VideoPayload = {
   thumnail: string;
   pdfSource: string;
   description: string;
+  gumletVideoId?: string;
   content?: {
     name: string;
     startTime: string;

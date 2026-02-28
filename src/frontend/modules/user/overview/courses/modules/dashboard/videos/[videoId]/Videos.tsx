@@ -1,12 +1,26 @@
 "use client";
 import { Video } from "@/backend/types";
 import axios from "axios";
-import ReactPlayer from "react-player";
+import dynamic from "next/dynamic";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { userStore } from "@/store/user/user";
 import QuizStartModal from "@/frontend/components/quizStartModal/QuizStartModal";
 import FeedbackModal from "@/frontend/components/feedbackModal/FeedbackModal";
+import ReactPlayer from "react-player";
+
+// Dynamically import GumletPlayer to avoid SSR issues
+const GumletPlayer = dynamic(
+  () => import("@gumlet/react-embed-player").then((mod) => mod.GumletPlayer),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-500 bg-gray-200 rounded-lg">
+        <p className="text-gray-600">Loading player...</p>
+      </div>
+    ),
+  }
+);
 
 interface Props {
   videoId: string;
@@ -41,6 +55,19 @@ export default function Videos({
   subSectionBlockName,
 }: Props) {
   const router = useRouter();
+
+  // Log initial props
+  console.log("🎬 Videos component initialized with props:", {
+    videoId,
+    noteId,
+    courseId,
+    moduleId,
+    sectionId,
+    subSectionId,
+    subSectionBlockId,
+    subSectionBlockName,
+    currentPath: router.asPath,
+  });
   // const [module, setModule] = useState<Module | null>(null);
   const [video, setVideo] = useState<Video | null>(null);
   const { user, favourites, getFavourites, setFavourites } = userStore();
@@ -60,7 +87,7 @@ export default function Videos({
     useState<boolean>(false);
   const [selectedQuestions, setSelectedQuestions] = useState<string[]>([]);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<any>(null);
   const [showOverlay, setShowOverlay] = useState(false);
   const [overlayPosition, setOverlayPosition] = useState({
     top: "50%",
@@ -94,9 +121,18 @@ export default function Videos({
       const { data } = await axios.get(
         `/api/videoCourses/${courseId}/modules/${moduleId}/section/${sectionId}/subSection/${subSectionId}/subSectionBlock/${subSectionBlockId}/video`
       );
+      console.log("📹 Video data received:", {
+        videoId: data.video?._id,
+        title: data.video?.title,
+        gumletVideoId: data.video?.gumletVideoId,
+        videoSource: data.video?.videoSource,
+        hasContent: !!data.video?.content,
+        contentCount: data.video?.content?.length,
+        fullVideoData: data.video,
+      });
       setVideo(data.video);
     } catch (error) {
-      console.error("getVideo error ", error);
+      console.error("❌ getVideo error ", error);
     }
   };
   useEffect(() => {
@@ -110,12 +146,46 @@ export default function Videos({
     getVideo();
   }, [courseId, moduleId, sectionId, subSectionId, subSectionBlockId]);
 
+  // Poll for Gumlet video ID if video exists but doesn't have gumletVideoId yet
   useEffect(() => {
+    if (video && !video.gumletVideoId && video.videoSource) {
+      // Poll every 10 seconds to check if Gumlet import completed
+      const interval = setInterval(() => {
+        getVideo();
+      }, 10000); // Check every 10 seconds
+
+      // Stop polling after 5 minutes (30 checks)
+      const timeout = setTimeout(() => {
+        clearInterval(interval);
+      }, 300000);
+
+      return () => {
+        clearInterval(interval);
+        clearTimeout(timeout);
+      };
+    }
+  }, [video]);
+
+  useEffect(() => {
+    console.log("🔄 Video state changed:", {
+      videoId: video?._id,
+      videoTitle: video?.title,
+      hasGumletId: !!video?.gumletVideoId,
+      gumletVideoId: video?.gumletVideoId,
+      hasVideoSource: !!video?.videoSource,
+      videoSource: video?.videoSource,
+    });
+
     fetchVideoStatus();
     if (favourites && video?._id) {
-      setAddedToFavourites(
-        favourites.favouriteVideos.some((v) => v.video?._id === video._id)
+      const isFavourite = favourites.favouriteVideos.some(
+        (v) => v.video?._id === video._id
       );
+      console.log("❤️ Favourite status:", {
+        isFavourite,
+        videoId: video._id,
+      });
+      setAddedToFavourites(isFavourite);
     } else {
       setAddedToFavourites(false);
     }
@@ -128,10 +198,22 @@ export default function Videos({
       const { data } = await axios.get(
         `/api/users/video-status?videoId=${videoId}`
       );
+      console.log("📊 Video status data received:", {
+        videoStatusesCount: data.videoStatuses?.length,
+        allVideoStatuses: data.videoStatuses,
+        currentVideoId: video?._id,
+        videoIdParam: videoId,
+      });
 
       const videoStatus = data.videoStatuses.find(
         (status: { videoId: string }) => status.videoId === video?._id
       );
+      console.log("🔍 Matching videoStatus:", {
+        found: !!videoStatus,
+        videoStatus: videoStatus,
+        searchedVideoId: video?._id,
+      });
+
       // Create a map of `contentId` to its `completed` status from the API response
       if (videoStatus) {
         // Create a map of `contentId` to its `completed` status from the matched videoStatus
@@ -153,9 +235,21 @@ export default function Videos({
             })
             .filter((index) => index !== null) || [];
 
+        console.log("✅ Checked items set:", {
+          completedContentIndexes,
+          checkedItemsCount: completedContentIndexes.length,
+        });
         setCheckedItems(completedContentIndexes as number[]);
       } else {
-        console.warn("No matching videoStatus found for videoId:", video?._id);
+        // No videoStatus found - this is normal for first-time viewers
+        console.log(
+          "ℹ️ No videoStatus found (first view) - initializing with empty checked items:",
+          {
+            videoId: video?._id,
+            videoName: video?.name,
+          }
+        );
+        setCheckedItems([]);
       }
     } catch (error) {
       console.error("fetchVideoStatus Error:", error);
@@ -187,14 +281,19 @@ export default function Videos({
     }
   };
 
-  const handleProgress = ({ playedSeconds }: { playedSeconds: number }) => {
+  const handleProgress = ({
+    seconds: currentSeconds,
+  }: {
+    seconds: number;
+    duration: number;
+  }) => {
     video?.content.forEach((item, index) => {
       const brokenTime = item.endTime.split(":").map(Number); // Convert time to [hours, minutes, seconds]
       const [hours = 0, minutes = 0, seconds = 0] = brokenTime;
       const totalSeconds = hours * 3600 + minutes * 60 + seconds;
       if (
         !checkedItems.includes(index) && // If not already checked
-        playedSeconds >= totalSeconds // Check if endTime is reached
+        currentSeconds >= totalSeconds // Check if endTime is reached
       ) {
         updateVideoStatus(index, true); // Update the backend
       }
@@ -279,13 +378,17 @@ export default function Videos({
     }
   };
 
-  const changeTime = (time: string) => {
+  const changeTime = async (time: string) => {
     const brokenTime = time.split(":").map(Number); // Convert time to [hours, minutes, seconds]
     const [hours = 0, minutes = 0, seconds = 0] = brokenTime;
     const totalSeconds = hours * 3600 + minutes * 60 + seconds;
 
     if (videoRef.current) {
-      videoRef.current.seekTo(totalSeconds);
+      try {
+        await videoRef.current.setCurrentTime(totalSeconds);
+      } catch (error) {
+        console.error("Error seeking video:", error);
+      }
     }
   };
 
@@ -309,6 +412,12 @@ export default function Videos({
       const { data } = await axios.get(
         `/api/videoCourses/${courseId}/modules/${moduleId}/section/${sectionId}/subSection/${subSectionId}`
       );
+      console.log("📚 SubSection data received:", {
+        subSectionId,
+        subSectionBlockId,
+        subSectionBlocks: data.subSection?.subSectionBlocks,
+        subSectionData: data.subSection,
+      });
 
       // Assuming `data.subSection.subSectionBlocks` is the array you provided
       const subSectionBlocks = data.subSection.subSectionBlocks;
@@ -317,14 +426,23 @@ export default function Videos({
       const selectedBlock = subSectionBlocks.find(
         (block) => block._id === subSectionBlockId
       );
+      console.log("🎯 Selected block:", {
+        found: !!selectedBlock,
+        blockId: subSectionBlockId,
+        blockData: selectedBlock,
+      });
 
       // Extract the questions array or set to an empty array if not found
       const selectedQuestions = selectedBlock ? selectedBlock.questions : [];
+      console.log("❓ Selected questions:", {
+        count: selectedQuestions.length,
+        questions: selectedQuestions,
+      });
 
       setSelectedQuestions(selectedQuestions);
       return selectedQuestions;
     } catch (error) {
-      console.error("Error getting subSection:", error);
+      console.error("❌ Error getting subSection:", error);
       return [];
     }
   };
@@ -521,26 +639,67 @@ export default function Videos({
             onContextMenu={(e) => e.preventDefault()} // Disable right-click on the container
             className={`relative w-full h-500 overflow-clip `}
           >
-            <ReactPlayer
-              ref={videoRef}
-              url={!video?.videoSource ? "" : video.videoSource}
-              controls // Show play, pause, volume, etc.
-              playing // Video will not autoplay
-              onProgress={handleProgress}
-              loop={false}
-              light={<img src={video?.thumbnail} alt="Thumbnail" />}
-              width={"100%"}
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-              config={{
-                file: {
-                  attributes: {
-                    controlsList: "nodownload", // Disable download option
-                    disablePictureInPicture: true, // Disable picture-in-picture
+            {video?.gumletVideoId ? (
+              <GumletPlayer
+                ref={videoRef}
+                videoID={video.gumletVideoId}
+                title={video?.title || "Video Player"}
+                style={{ height: "500px", width: "100%", position: "relative" }}
+                autoplay={false}
+                preload={false}
+                muted={false}
+                disable_player_controls={false}
+                thumbnail={
+                  video?.thumbnail
+                    ? encodeURIComponent(video.thumbnail)
+                    : undefined
+                }
+                onReady={() => console.log("Player is ready")}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onTimeUpdate={(e) => {
+                  handleProgress(e);
+                }}
+                onProgress={(e) => {
+                  // Handle progress updates
+                  console.log("Progress:", e.percent);
+                }}
+                onEnded={() => console.log("Video ended")}
+                onError={(e) => console.error("Player error:", e)}
+                gm_user_id={user?.displayId}
+                gm_user_email={user?.email}
+                gm_user_name={user?.name}
+              />
+            ) : video?.videoSource ? (
+              // Fallback to ReactPlayer if Gumlet ID is not available yet
+              <ReactPlayer
+                ref={videoRef}
+                url={video.videoSource}
+                controls
+                playing={false}
+                onProgress={({ playedSeconds }) => {
+                  handleProgress({ seconds: playedSeconds, duration: 0 });
+                }}
+                loop={false}
+                light={<img src={video?.thumbnail} alt="Thumbnail" />}
+                width={"100%"}
+                height={"500px"}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                config={{
+                  file: {
+                    attributes: {
+                      controlsList: "nodownload",
+                      disablePictureInPicture: true,
+                    },
                   },
-                },
-              }}
-            />
+                }}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-500 bg-gray-200 rounded-lg">
+                <p className="text-gray-600">Video source not available.</p>
+              </div>
+            )}
             {/* Contact Overlay */}
             {showOverlay && (
               <div
